@@ -1,0 +1,24 @@
+{
+    "name": "truesocialmetrics/2checkout-api-legacy",
+    "type": "library",
+    "description": "2checkout Lgeacy API based on Avangate",
+    "keywords": ["2checkout", "avangate", "api", "legacy"],
+    "homepage": "https://github.com/truesocialmetrics/2checkout-api-legacy",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rostislav Mykhajliw",
+            "email": "necromant2005@gmail.com",
+            "homepage": "https://github.com/necromant2005",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Twee\\TwoCheckout\\": "src/TwoCheckout/"
+        }
+    }
+}
