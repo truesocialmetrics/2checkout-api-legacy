@@ -8,25 +8,21 @@ final class ApiLegacy
 
     public function __construct(string $vendorCode, string $secretCode)
     {
-        $this->vendorCode = $vendorCode;
-        $this->secretCode = $secretCode;
+        $this->vendorCode = $vendorCode; //merchant code is available on this page https://secure.2checkout.com/cpanel/account_settings.php
+        $this->secretCode = $secretCode; //secret key is available on this page https://secure.2checkout.com/cpanel/account_settings.php
     }
 
     public function rest(array $options)
     {
-        $secret_key = $this->secretCode; //secret key is available on this page https://secure.2checkout.com/cpanel/account_settings.php
-        $base_link = 'https://secure.2checkout.com/action/ise.php';
         date_default_timezone_set('UTC');
 
-
         //*********SETTING PARAMETERS*********
-        // $link_params = array();
-        $not_in_hash = ['HASH','INCLUDE_DELIVERED_CODES','INCLUDE_FINANCIAL_DETAILS','INCLUDE_EXCHANGE_RATES','INCLUDE_PRICING_OPTIONS','EXPORT_FORMAT','EXPORT_TIMEZONE_REGION'];
+        $link_params = [];
 
         //REQUIRED, CANNOT BE EMPTY:
-        $link_params['MERCHANT'] = $this->vendorCode; //merchant code is available on this page https://secure.2checkout.com/cpanel/account_settings.php
-        $link_params['STARTDATE'] = date("Y-m-d", strtotime('-1 month', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //first day from last month
-        $link_params['ENDDATE'] = date("Y-m-d", strtotime('-1 second', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //last day from last month
+        $link_params['MERCHANT'] = $this->vendorCode;
+        $link_params['STARTDATE'] = array_key_exists('STARTDATE', $options) ? $options['STARTDATE'] : date("Y-m-d", strtotime('-1 month', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //first day from last month
+        $link_params['ENDDATE'] = array_key_exists('ENDDATE', $options) ? $options['ENDDATE'] : date("Y-m-d", strtotime('-1 second', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //last day from last month
 
         $link_params['ORDERSTATUS'] = 'ALL'; // replace with any of  ALL, COMPLETE, REFUNDED, UNFINISHED
         $link_params['REQ_DATE'] = date('YmdHis');
@@ -34,10 +30,10 @@ final class ApiLegacy
         //CAN BE EMPTY:
         $link_params['PRODUCT_ID'] = '';
         $link_params['COUNTRY_CODE'] = '';
-        $link_params['FILTER_STRING'] = '';
+        $link_params['FILTER_STRING'] = array_key_exists('FILTER_STRING', $options) ? $options['FILTER_STRING'] : '';
 
         //REQUIRED, CAN BE EMPTY:
-        $link_params['FILTER_FIELD'] = ''; // EMPTY OR: REFNO, REFNOEXT, NAME, EMAIL, COUPONCODE
+        $link_params['FILTER_FIELD'] = array_key_exists('FILTER_STRING', $options) ? $options['FILTER_STRING'] : ''; // EMPTY OR: REFNO, REFNOEXT, NAME, EMAIL, COUPONCODE
 
         //REQUIRED:
         $link_params['HASH'] = '';
@@ -56,6 +52,9 @@ final class ApiLegacy
 
     private function query(array $link_params)
     {
+        $base_link = 'https://secure.2checkout.com/action/ise.php';
+        $not_in_hash = ['HASH','INCLUDE_DELIVERED_CODES','INCLUDE_FINANCIAL_DETAILS','INCLUDE_EXCHANGE_RATES','INCLUDE_PRICING_OPTIONS','EXPORT_FORMAT','EXPORT_TIMEZONE_REGION'];
+
         //*********GET Base string for HMAC_MD5 calculation:*********
         $result = '';
         while (list($key, $val) = each($link_params)) {
@@ -73,7 +72,7 @@ final class ApiLegacy
 
 
         //*********Calculated HMAC_MD5 signature:*********
-        $hash = $this->hmac($secret_key, $result);
+        $hash = $this->hmac($this->secretCode, $result);
         $link_params['HASH'] = $hash;
 
         $get_vars = http_build_query($link_params, '', '&');
