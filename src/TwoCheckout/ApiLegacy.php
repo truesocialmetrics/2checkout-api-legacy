@@ -1,6 +1,9 @@
 <?php
 namespace Twee\TwoCheckout;
 
+use RuntimeException;
+use InvalidArgumentException;
+
 final class ApiLegacy
 {
     private $vendorCode = '';
@@ -14,15 +17,20 @@ final class ApiLegacy
 
     public function rest(array $options)
     {
-        date_default_timezone_set('UTC');
-
         //*********SETTING PARAMETERS*********
         $link_params = [];
 
         //REQUIRED, CANNOT BE EMPTY:
         $link_params['MERCHANT'] = $this->vendorCode;
-        $link_params['STARTDATE'] = array_key_exists('STARTDATE', $options) ? $options['STARTDATE'] : date("Y-m-d", strtotime('-1 month', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //first day from last month
-        $link_params['ENDDATE'] = array_key_exists('ENDDATE', $options) ? $options['ENDDATE'] : date("Y-m-d", strtotime('-1 second', strtotime(date('Y') . '/' . date('m') . '/01' . ' 00:00:00'))); //last day from last month
+        if (!array_key_exists('STARTDATE', $options)) {
+            throw new InvalidArgumentException('Missed STARTDATE');
+        }
+        if (!array_key_exists('ENDDATE', $options)) {
+            throw new InvalidArgumentException('Missed ENDDATE');
+        }
+
+        $link_params['STARTDATE'] = $options['STARTDATE'];
+        $link_params['ENDDATE'] = $options['ENDDATE'];
 
         $link_params['ORDERSTATUS'] = 'ALL'; // replace with any of  ALL, COMPLETE, REFUNDED, UNFINISHED
         $link_params['REQ_DATE'] = date('YmdHis');
@@ -33,7 +41,7 @@ final class ApiLegacy
         $link_params['FILTER_STRING'] = array_key_exists('FILTER_STRING', $options) ? $options['FILTER_STRING'] : '';
 
         //REQUIRED, CAN BE EMPTY:
-        $link_params['FILTER_FIELD'] = array_key_exists('FILTER_STRING', $options) ? $options['FILTER_STRING'] : ''; // EMPTY OR: REFNO, REFNOEXT, NAME, EMAIL, COUPONCODE
+        $link_params['FILTER_FIELD'] = array_key_exists('FILTER_FIELD', $options) ? $options['FILTER_FIELD'] : ''; // EMPTY OR: REFNO, REFNOEXT, NAME, EMAIL, COUPONCODE
 
         //REQUIRED:
         $link_params['HASH'] = '';
@@ -93,35 +101,14 @@ final class ApiLegacy
         //echo 'Curl error: '.curl_error($ch);
         curl_close($ch);
 
-
-        //*********PROCESS RESULTS*********
-        if ($headerCode == 200) {
-            // do something with the csv or xml received
-            //the format of the export file is set using $link_params['EXPORT_FORMAT']
-            $exportType = strtolower($link_params['EXPORT_FORMAT']);
-            $headerType = 'Content-type: application/' . $exportType . ';charset=UTF-8';
-            $headerDisposition = 'Content-Disposition: attachment; filename="ise.' . $exportType . '"';
-            header($headerType);
-            header($headerDisposition);
-            echo $responseData;
-        } else {
-            //no valid answer received: request period is too big, etc.
-            if (strpos($contentType, 'xml') === false) {
-                echo 'Header returned: ' . $headerCode;
-                echo $responseData;
-            } else {
-                //YOUR CODE HERE AFTER RECEIVING the xml with one of the codes from Instant Search Export Handbook
-                $xml = $responseData;
-                $xml = simplexml_load_string($xml);
-                $response = [];
-                $i = 0;
-                foreach ($xml->children() as $child) {
-                    $response[$i] = $child;
-                    $i++;
-                }
-                echo $xml->asXML();
-            }
+        if ($headerCode != 200) {
+            throw new RuntimeException($responseData, $headerCode);
         }
+
+        $xml = simplexml_load_string($responseData, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $json = json_encode($xml);
+
+        return json_decode($json, true);
     }
 
     //*********FUNCTIONS FOR HMAC*********
