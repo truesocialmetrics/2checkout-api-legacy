@@ -65,16 +65,15 @@ final class ApiLegacy
 
         //*********GET Base string for HMAC_MD5 calculation:*********
         $result = '';
-        while (list($key, $val) = each($link_params)) {
-            $$key = $val;
-            /* get values */
-            if (!in_array($key, $not_in_hash)) {
-                if (is_array($val)) {
-                    $result .= $this->ArrayExpand($val);
-                } else {
-                    $size = strlen(StripSlashes($val));
-                    $result .= $size . StripSlashes($val);
-                }
+        foreach ($link_params as $key => $val) {
+            if (in_array($key, $not_in_hash)) {
+                continue;
+            }
+            if (is_array($val)) {
+                $result .= $this->ArrayExpand($val);
+            } else {
+                $size = strlen(StripSlashes($val));
+                $result .= $size . StripSlashes($val);
             }
         }
 
