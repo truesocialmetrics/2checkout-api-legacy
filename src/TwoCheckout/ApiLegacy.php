@@ -84,6 +84,7 @@ final class ApiLegacy
 
         $get_vars = http_build_query($link_params, '', '&');
 
+        // var_dump($base_link . '?' . $get_vars);
 
         //*********MAKE POST CALL to get ISE results*********
         $ch = curl_init($base_link . '?' . $get_vars);
@@ -103,8 +104,13 @@ final class ApiLegacy
         if ($headerCode != 200) {
             throw new RuntimeException($responseData, $headerCode);
         }
+        if (str_contains($responseData, '<META NAME="robots" CONTENT="noindex,nofollow">')) {
+            throw new RuntimeException($responseData, $headerCode);
+        }
 
-        $xml = simplexml_load_string($responseData, 'SimpleXMLElement', LIBXML_NOCDATA);
+        // file_put_contents('tmp/response', $responseData);
+
+        $xml = @simplexml_load_string($responseData, 'SimpleXMLElement', LIBXML_NOCDATA);
         $json = json_encode($xml);
 
         return json_decode($json, true);
